@@ -1,0 +1,38 @@
+
+
+qkv      M=  1 warm=  46.1us  dirty_flush=  61.4us  clean_flush=  46.1us  rotating=  46.6us
+qkv      M= 64 warm=  48.6us  dirty_flush=  63.5us  clean_flush=  47.1us  rotating=  48.1us
+o        M=  1 warm=  45.1us  dirty_flush=  47.1us  clean_flush=  35.8us  rotating=  45.1us
+o        M= 64 warm=  46.1us  dirty_flush=  48.1us  clean_flush=  34.8us  rotating=  46.1us
+gate_up  M=  1 warm= 183.3us  dirty_flush= 200.7us  clean_flush= 183.3us  rotating= 183.8us
+gate_up  M= 64 warm= 287.7us  dirty_flush= 299.0us  clean_flush= 282.6us  rotating= 288.8us
+ncu rc 0
+[7615] python3.13@127.0.0.1
+  ampere_bf16_s16816gemm_bf16_64x64_sliced1x2_ldg8_f2f_stages_64x6_tn (64, 1, 1)x(128, 1, 1), Context 1, Stream 7, Device 0, CC 8.0
+    Section: Command line profiler metrics
+    -------------------------------------------------- ----------- ------------
+    Metric Name                                        Metric Unit Metric Value
+    -------------------------------------------------- ----------- ------------
+    dram__bytes_read.sum                                     Mbyte        33.58
+    dram__throughput.avg.pct_of_peak_sustained_elapsed           %        66.36
+    gpu__time_duration.sum                                      us        34.82
+    launch__block_size                                                      128
+    launch__grid_size                                                        64
+    sm__throughput.avg.pct_of_peak_sustained_elapsed             %        25.79
+    -------------------------------------------------- ----------- ------------
+
+  ampere_bf16_s16816gemm_bf16_64x64_sliced1x2_ldg8_f2f_stages_64x6_tn (64, 1, 1)x(128, 1, 1), Context 1, Stream 7, Device 0, CC 8.0
+    Section: Command line profiler metrics
+    -------------------------------------------------- ----------- ------------
+    Metric Name                                        Metric Unit Metric Value
+    -------------------------------------------------- ----------- ------------
+    dram__bytes_read.sum                                     Mbyte        33.58
+    dram__throughput.avg.pct_of_peak_sustained_elapsed           %        66.42
+    gpu__time_duration.sum                                      us        34.75
+    launch__block_size                                                      128
+    launch__grid_size                                                        64
+    sm__throughput.avg.pct_of_peak_sustained_elapsed             %        25.63
+    -------------------------------------------------- ----------- ------------
+
+CompletedProcess(args='nvidia-smi -rgc', returncode=0, stdout=b'All done.\n', 
+stderr=b'')

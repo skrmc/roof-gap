@@ -1,0 +1,132 @@
+
+
+2.11.0+cu130 NVIDIA A100-SXM4-40GB
+
+### unlocked
+ceilings: {"copy_GBps": 1380.2, "read_GBps": 1431.0, "write_GBps": 1546.6, "gemm4096_TFLOPs": 267.9, "gemm8192_TFLOPs": 270.9}
+clocks(ceil): {'sm_min': 1290.0, 'sm_med_busy': 1305.0, 'mem_clk': 1215.0, 'power_max': 415.1, 'temp_max': 47.0, 'reasons_busy': ['0x0000000000000000', '0x0000000000000004']}
+clocks(sweep): {'sm_min': 1275.0, 'sm_med_busy': 1410.0, 'mem_clk': 1215.0, 'power_max': 433.86, 'temp_max': 54.0, 'reasons_busy': ['0x0000000000000000', '0x0000000000000004']}
+  qkv      M=   1     61.4us     820GB/s    0.8TF eff_spec=0.53 eff_attain=0.57
+  qkv      M=  16     61.4us     825GB/s   13.1TF eff_spec=0.53 eff_attain=0.58
+  qkv      M=  64     62.5us     827GB/s   51.6TF eff_spec=0.53 eff_attain=0.58
+  qkv      M= 128     74.8us     708GB/s   86.2TF eff_spec=0.46 eff_attain=0.50
+  qkv      M= 256     75.8us     733GB/s  170.0TF eff_spec=0.54 eff_attain=0.63
+  qkv      M= 512    108.5us     560GB/s  237.4TF eff_spec=0.76 eff_attain=0.88
+  o        M=   1     46.1us     729GB/s    0.7TF eff_spec=0.47 eff_attain=0.51
+  o        M=  16     46.1us     734GB/s   11.7TF eff_spec=0.47 eff_attain=0.51
+  o        M=  64     47.1us     735GB/s   45.6TF eff_spec=0.47 eff_attain=0.51
+  o        M= 128     55.3us     645GB/s   77.7TF eff_spec=0.41 eff_attain=0.45
+  o        M= 256     64.5us     585GB/s  133.2TF eff_spec=0.43 eff_attain=0.49
+  o        M= 512     96.3us     436GB/s  178.5TF eff_spec=0.57 eff_attain=0.66
+  gate_up  M=   1    197.6us    1189GB/s    1.2TF eff_spec=0.76 eff_attain=0.83
+  gate_up  M=  16    203.8us    1158GB/s   18.4TF eff_spec=0.74 eff_attain=0.81
+  gate_up  M=  64    284.7us     840GB/s   52.8TF eff_spec=0.54 eff_attain=0.59
+  gate_up  M= 128    289.8us     839GB/s  103.7TF eff_spec=0.54 eff_attain=0.59
+  gate_up  M= 256    331.8us     759GB/s  181.2TF eff_spec=0.58 eff_attain=0.67
+  gate_up  M= 512    515.1us     521GB/s  233.5TF eff_spec=0.75 eff_attain=0.86
+  down     M=   1    112.6us    1043GB/s    1.0TF eff_spec=0.67 eff_attain=0.73
+  down     M=  16    112.6us    1048GB/s   16.7TF eff_spec=0.67 eff_attain=0.73
+  down     M=  64    117.8us    1017GB/s   63.8TF eff_spec=0.65 eff_attain=0.71
+  down     M= 128    128.0us     954GB/s  117.4TF eff_spec=0.61 eff_attain=0.67
+  down     M= 256    152.1us     834GB/s  197.7TF eff_spec=0.63 eff_attain=0.73
+  down     M= 512    257.0us     530GB/s  233.9TF eff_spec=0.75 eff_attain=0.86
+  lm_head  M=   1    744.4us    1412GB/s    1.4TF eff_spec=0.91 eff_attain=0.99
+  lm_head  M=  16    763.9us    1381GB/s   22.0TF eff_spec=0.89 eff_attain=0.97
+  lm_head  M=  64    792.6us    1347GB/s   84.8TF eff_spec=0.87 eff_attain=0.94
+  lm_head  M= 128    822.3us    1319GB/s  163.6TF eff_spec=0.85 eff_attain=0.92
+  lm_head  M= 256   1130.5us     989GB/s  237.9TF eff_spec=0.76 eff_attain=0.88
+  lm_head  M= 512   2099.2us     565GB/s  256.3TF eff_spec=0.82 eff_attain=0.95
+  warm-L2 qkv  M=  1    47.1us vs cold    61.4us
+  warm-L2 qkv  M= 16    46.1us vs cold    61.4us
+  warm-L2 qkv  M= 64    47.1us vs cold    62.5us
+  warm-L2 qkv  M=256    65.5us vs cold    75.8us
+  warm-L2 o    M=  1    44.0us vs cold    46.1us
+  warm-L2 o    M= 16    46.1us vs cold    46.1us
+  warm-L2 o    M= 64    45.1us vs cold    47.1us
+  warm-L2 o    M=256    60.4us vs cold    64.5us
+
+### lock1410
+ceilings: {"copy_GBps": 1379.7, "read_GBps": 1433.5, "write_GBps": 1546.6, "gemm4096_TFLOPs": 267.4, "gemm8192_TFLOPs": 271.4}
+clocks(ceil): {'sm_min': 1290.0, 'sm_med_busy': 1395.0, 'mem_clk': 1215.0, 'power_max': 412.14, 'temp_max': 53.0, 'reasons_busy': ['0x0000000000000000', '0x0000000000000004']}
+clocks(sweep): {'sm_min': 1275.0, 'sm_med_busy': 1410.0, 'mem_clk': 1215.0, 'power_max': 427.1, 'temp_max': 56.0, 'reasons_busy': ['0x0000000000000000', '0x0000000000000004']}
+  qkv      M=   1     61.4us     820GB/s    0.8TF eff_spec=0.53 eff_attain=0.57
+  qkv      M=  16     62.5us     811GB/s   12.9TF eff_spec=0.52 eff_attain=0.57
+  qkv      M=  64     62.5us     827GB/s   51.6TF eff_spec=0.53 eff_attain=0.58
+  qkv      M= 128     74.2us     713GB/s   86.8TF eff_spec=0.46 eff_attain=0.50
+  qkv      M= 256     75.8us     733GB/s  170.0TF eff_spec=0.54 eff_attain=0.63
+  qkv      M= 512    108.5us     560GB/s  237.4TF eff_spec=0.76 eff_attain=0.87
+  o        M=   1     46.1us     729GB/s    0.7TF eff_spec=0.47 eff_attain=0.51
+  o        M=  16     46.1us     734GB/s   11.7TF eff_spec=0.47 eff_attain=0.51
+  o        M=  64     47.1us     735GB/s   45.6TF eff_spec=0.47 eff_attain=0.51
+  o        M= 128     55.3us     645GB/s   77.7TF eff_spec=0.41 eff_attain=0.45
+  o        M= 256     64.5us     585GB/s  133.2TF eff_spec=0.43 eff_attain=0.49
+  o        M= 512     96.3us     436GB/s  178.5TF eff_spec=0.57 eff_attain=0.66
+  gate_up  M=   1    197.6us    1189GB/s    1.2TF eff_spec=0.76 eff_attain=0.83
+  gate_up  M=  16    203.8us    1158GB/s   18.4TF eff_spec=0.74 eff_attain=0.81
+  gate_up  M=  64    283.6us     843GB/s   53.0TF eff_spec=0.54 eff_attain=0.59
+  gate_up  M= 128    290.8us     837GB/s  103.4TF eff_spec=0.54 eff_attain=0.58
+  gate_up  M= 256    332.8us     756GB/s  180.7TF eff_spec=0.58 eff_attain=0.67
+  gate_up  M= 512    516.1us     520GB/s  233.0TF eff_spec=0.75 eff_attain=0.86
+  down     M=   1    112.6us    1043GB/s    1.0TF eff_spec=0.67 eff_attain=0.73
+  down     M=  16    112.6us    1048GB/s   16.7TF eff_spec=0.67 eff_attain=0.73
+  down     M=  64    116.7us    1026GB/s   64.4TF eff_spec=0.66 eff_attain=0.72
+  down     M= 128    127.0us     962GB/s  118.4TF eff_spec=0.62 eff_attain=0.67
+  down     M= 256    151.6us     837GB/s  198.4TF eff_spec=0.64 eff_attain=0.73
+  down     M= 512    257.0us     530GB/s  233.9TF eff_spec=0.75 eff_attain=0.86
+  lm_head  M=   1    743.4us    1414GB/s    1.4TF eff_spec=0.91 eff_attain=0.99
+  lm_head  M=  16    762.9us    1383GB/s   22.0TF eff_spec=0.89 eff_attain=0.96
+  lm_head  M=  64    793.1us    1346GB/s   84.8TF eff_spec=0.87 eff_attain=0.94
+  lm_head  M= 128    821.2us    1321GB/s  163.8TF eff_spec=0.85 eff_attain=0.92
+  lm_head  M= 256   1130.5us     989GB/s  237.9TF eff_spec=0.76 eff_attain=0.88
+  lm_head  M= 512   2126.8us     558GB/s  252.9TF eff_spec=0.81 eff_attain=0.93
+  warm-L2 qkv  M=  1    47.1us vs cold    61.4us
+  warm-L2 qkv  M= 16    46.1us vs cold    62.5us
+  warm-L2 qkv  M= 64    47.1us vs cold    62.5us
+  warm-L2 qkv  M=256    64.5us vs cold    75.8us
+  warm-L2 o    M=  1    44.0us vs cold    46.1us
+  warm-L2 o    M= 16    45.1us vs cold    46.1us
+  warm-L2 o    M= 64    45.1us vs cold    47.1us
+  warm-L2 o    M=256    60.4us vs cold    64.5us
+
+### lock1215
+ceilings: {"copy_GBps": 1383.8, "read_GBps": 1431.5, "write_GBps": 1543.7, "gemm4096_TFLOPs": 229.0, "gemm8192_TFLOPs": 255.0}
+clocks(ceil): {'sm_min': 1215.0, 'sm_med_busy': 1215.0, 'mem_clk': 1215.0, 'power_max': 343.76, 'temp_max': 52.0, 'reasons_busy': ['0x0000000000000000']}
+clocks(sweep): {'sm_min': 1215.0, 'sm_med_busy': 1215.0, 'mem_clk': 1215.0, 'power_max': 355.32, 'temp_max': 54.0, 'reasons_busy': ['0x0000000000000000']}
+  qkv      M=   1     62.5us     806GB/s    0.8TF eff_spec=0.52 eff_attain=0.56
+  qkv      M=  16     62.5us     811GB/s   12.9TF eff_spec=0.52 eff_attain=0.57
+  qkv      M=  64     63.5us     813GB/s   50.7TF eff_spec=0.52 eff_attain=0.57
+  qkv      M= 128     76.8us     689GB/s   83.9TF eff_spec=0.44 eff_attain=0.48
+  qkv      M= 256     80.9us     687GB/s  159.3TF eff_spec=0.51 eff_attain=0.62
+  qkv      M= 512    126.0us     483GB/s  204.6TF eff_spec=0.66 eff_attain=0.80
+  o        M=   1     47.1us     713GB/s    0.7TF eff_spec=0.46 eff_attain=0.50
+  o        M=  16     47.1us     718GB/s   11.4TF eff_spec=0.46 eff_attain=0.50
+  o        M=  64     48.1us     719GB/s   44.6TF eff_spec=0.46 eff_attain=0.50
+  o        M= 128     57.3us     622GB/s   74.9TF eff_spec=0.40 eff_attain=0.43
+  o        M= 256     70.7us     534GB/s  121.6TF eff_spec=0.39 eff_attain=0.48
+  o        M= 512    109.6us     383GB/s  156.8TF eff_spec=0.50 eff_attain=0.61
+  gate_up  M=   1    201.7us    1165GB/s    1.2TF eff_spec=0.75 eff_attain=0.81
+  gate_up  M=  16    207.9us    1135GB/s   18.1TF eff_spec=0.73 eff_attain=0.79
+  gate_up  M=  64    301.1us     794GB/s   49.9TF eff_spec=0.51 eff_attain=0.55
+  gate_up  M= 128    309.2us     787GB/s   97.2TF eff_spec=0.51 eff_attain=0.55
+  gate_up  M= 256    369.7us     681GB/s  162.7TF eff_spec=0.52 eff_attain=0.64
+  gate_up  M= 512    592.9us     453GB/s  202.8TF eff_spec=0.65 eff_attain=0.80
+  down     M=   1    113.7us    1034GB/s    1.0TF eff_spec=0.66 eff_attain=0.72
+  down     M=  16    114.7us    1029GB/s   16.4TF eff_spec=0.66 eff_attain=0.72
+  down     M=  64    119.3us    1004GB/s   63.0TF eff_spec=0.65 eff_attain=0.70
+  down     M= 128    131.1us     932GB/s  114.7TF eff_spec=0.60 eff_attain=0.65
+  down     M= 256    167.9us     756GB/s  179.0TF eff_spec=0.57 eff_attain=0.70
+  down     M= 512    294.9us     462GB/s  203.9TF eff_spec=0.65 eff_attain=0.80
+  lm_head  M=   1    747.5us    1406GB/s    1.4TF eff_spec=0.90 eff_attain=0.98
+  lm_head  M=  16    768.0us    1374GB/s   21.9TF eff_spec=0.88 eff_attain=0.96
+  lm_head  M=  64    797.7us    1338GB/s   84.3TF eff_spec=0.86 eff_attain=0.93
+  lm_head  M= 128    832.5us    1303GB/s  161.5TF eff_spec=0.84 eff_attain=0.91
+  lm_head  M= 256   1199.1us     933GB/s  224.3TF eff_spec=0.72 eff_attain=0.88
+  lm_head  M= 512   2232.3us     531GB/s  241.0TF eff_spec=0.77 eff_attain=0.94
+  warm-L2 qkv  M=  1    47.1us vs cold    62.5us
+  warm-L2 qkv  M= 16    47.1us vs cold    62.5us
+  warm-L2 qkv  M= 64    48.1us vs cold    63.5us
+  warm-L2 qkv  M=256    70.7us vs cold    80.9us
+  warm-L2 o    M=  1    44.0us vs cold    47.1us
+  warm-L2 o    M= 16    45.1us vs cold    47.1us
+  warm-L2 o    M= 64    44.0us vs cold    48.1us
+  warm-L2 o    M=256    68.6us vs cold    70.7us

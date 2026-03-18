@@ -1,0 +1,6 @@
+
+
+STEP {"b": 1, "s": 512, "steps": 66, "pure_steps": 64, "pure_med_ms": 13.161, "pure_p10_ms": 13.111, "pure_p90_ms": 13.213}
+STEP {"b": 32, "s": 1024, "steps": 70, "pure_steps": 60, "pure_med_ms": 19.103, "pure_p10_ms": 19.032, "pure_p90_ms": 19.173}
+STEP {"b": 128, "s": 512, "steps": 74, "pure_steps": 56, "pure_med_ms": 25.512, "pure_p10_ms": 25.313, "pure_p90_ms": 25.733}
+ 60 s
