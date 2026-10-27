@@ -1,4 +1,12 @@
-"""Shared helpers for the formal A100 experiments (run on the Colab VM from /content)."""
+"""Shared helpers for the A100 experiments.
+
+Paths and clocks come from the environment:
+  MODEL_DIR    local copy of Llama-3.1-8B (default ./models/llama31-8b)
+  RESULTS_DIR  where raw results are written (default ./results)
+  SM_CLOCK     MHz to lock the SM clock to, or "none" (default 1215: the highest clock that never hits
+               the A100-40GB power cap). Locking needs root; without it the experiments run unlocked.
+"""
+
 import json
 import os
 import random
@@ -7,11 +15,13 @@ import subprocess
 import threading
 import time
 
-MODEL = "/content/llama31-8b"
+MODEL = os.environ.get("MODEL_DIR", "./models/llama31-8b")
+RESULTS = os.environ.get("RESULTS_DIR", "./results")
+SM_CLOCK = os.environ.get("SM_CLOCK", "1215")
 OSL = 64
 BS = [1, 2, 4, 8, 16, 32, 64, 128, 256]
 SS = [128, 256, 512, 1024, 2048, 4096, 8192]
-GRID = [(b, s) for b in BS for s in SS if b * (s + OSL) <= 150_000]
+GRID = [(b, s) for b in BS for s in SS if b * (s + OSL) <= 150_000]  # same grid as analysis/baselines.py
 
 
 def smi(args):
@@ -19,8 +29,13 @@ def smi(args):
 
 
 def set_clock(mhz):
-    """Lock the SM clock (1215 MHz is the highest clock that never hits the power cap) or reset it (None)."""
-    smi("-rgc" if mhz is None else f"-lgc {mhz},{mhz}")
+    """Lock the SM clock to mhz, or reset it (None or "none")."""
+    smi("-rgc" if mhz in (None, "none") else f"-lgc {mhz},{mhz}")
+
+
+def out_path(name):
+    os.makedirs(RESULTS, exist_ok=True)
+    return os.path.join(RESULTS, name)
 
 
 class ClockMonitor:
@@ -32,8 +47,11 @@ class ClockMonitor:
         self.samples, self._stop = [], threading.Event()
 
     def _run(self):
-        p = subprocess.Popen(["nvidia-smi", f"--query-gpu={self.Q}", "--format=csv,noheader,nounits", "-lms", "100"],
-                             stdout=subprocess.PIPE, text=True)
+        p = subprocess.Popen(
+            ["nvidia-smi", f"--query-gpu={self.Q}", "--format=csv,noheader,nounits", "-lms", "100"],
+            stdout=subprocess.PIPE,
+            text=True,
+        )
         while not self._stop.is_set():
             line = p.stdout.readline()
             if line:
@@ -56,16 +74,29 @@ class ClockMonitor:
         busy = [s for s in self.samples if s[1] > 100] or self.samples
         if not busy:
             return {}
-        return {"sm_min": min(s[0] for s in busy), "sm_med": statistics.median(s[0] for s in busy),
-                "power_max": max(s[1] for s in busy), "temp_max": max(s[2] for s in busy),
-                "reasons": sorted({s[3] for s in busy})}
+        return {
+            "sm_min": min(s[0] for s in busy),
+            "sm_med": statistics.median(s[0] for s in busy),
+            "power_max": max(s[1] for s in busy),
+            "temp_max": max(s[2] for s in busy),
+            "reasons": sorted({s[3] for s in busy}),
+        }
 
 
 def make_llm(max_model_len=8192 + 2 * OSL, **kw):
     os.environ["VLLM_ENABLE_V1_MULTIPROCESSING"] = "0"  # drive the engine step by step in this process
     from vllm import LLM
-    return LLM(MODEL, dtype="bfloat16", enable_prefix_caching=False, max_model_len=max_model_len, max_num_seqs=256,
-               gpu_memory_utilization=0.9, seed=0, **kw)
+
+    return LLM(
+        MODEL,
+        dtype="bfloat16",
+        enable_prefix_caching=False,
+        max_model_len=max_model_len,
+        max_num_seqs=256,
+        gpu_memory_utilization=0.9,
+        seed=0,
+        **kw,
+    )
 
 
 def run_steps(llm, b, s, osl=OSL + 1, tag="x", on_step=None):
@@ -76,11 +107,14 @@ def run_steps(llm, b, s, osl=OSL + 1, tag="x", on_step=None):
     """
     from vllm import SamplingParams
     from vllm.inputs import TokensPrompt
+
     eng = llm.llm_engine
     rng = random.Random(hash((b, s)) & 0xFFFF)
     sp = SamplingParams(max_tokens=osl, min_tokens=osl, ignore_eos=True, temperature=0.0)
     for i in range(b):
-        eng.add_request(f"{tag}-{b}-{s}-{i}", TokensPrompt(prompt_token_ids=[rng.randint(1000, 120000) for _ in range(s)]), sp)
+        eng.add_request(
+            f"{tag}-{b}-{s}-{i}", TokensPrompt(prompt_token_ids=[rng.randint(1000, 120000) for _ in range(s)]), sp
+        )
     ntok, steps, t_prev = {}, [], time.perf_counter()
     while eng.has_unfinished_requests():
         pure = len(ntok) == b and all(0 < v < osl for v in ntok.values())
@@ -94,10 +128,16 @@ def run_steps(llm, b, s, osl=OSL + 1, tag="x", on_step=None):
         t_prev = t
     pure_ms = sorted(dt * 1e3 for dt, p in steps if p)
     n = len(pure_ms)
-    return {"b": b, "s": s, "n_steps": len(steps), "n_pure": n,
-            "step_ms": statistics.median(pure_ms) if n else float("nan"),
-            "p10_ms": pure_ms[n // 10] if n else float("nan"), "p90_ms": pure_ms[9 * n // 10] if n else float("nan"),
-            "pure_ms": [round(x, 4) for x in pure_ms]}
+    return {
+        "b": b,
+        "s": s,
+        "n_steps": len(steps),
+        "n_pure": n,
+        "step_ms": statistics.median(pure_ms) if n else float("nan"),
+        "p10_ms": pure_ms[n // 10] if n else float("nan"),
+        "p90_ms": pure_ms[9 * n // 10] if n else float("nan"),
+        "pure_ms": [round(x, 4) for x in pure_ms],
+    }
 
 
 def dump(path, rows):

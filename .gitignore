@@ -1,4 +1,7 @@
 __pycache__/
 .venv/
-*.log
-results/formal/nsys/
+models/
+third_party/
+results/nsys/
+results/*.log
+results/ladder_*.csv

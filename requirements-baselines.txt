@@ -1,0 +1,7 @@
+# Optional: re-run the roofline tools (analysis/baselines.py). Python 3.12.
+# GenZ is pinned to the commit used for results/baselines.csv.
+genz_llm @ git+https://github.com/abhibambhaniya/GenZ-LLM-Analyzer@091bdd0a2777dfe4d405a8fcdd91c8f12b474bf3
+aisimulate==0.12.0
+transformers
+easydict
+pandas

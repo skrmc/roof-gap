@@ -1,0 +1,3 @@
+# Analysis (CPU only): reproduces every number in the README from results/
+numpy
+pandas

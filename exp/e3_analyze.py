@@ -1,11 +1,12 @@
 """E3 analysis: split each nsys capture into GPU steps, keep pure decode steps, attribute kernel time to ops.
 
-  python e3_analyze.py /content/nsys/e3_1.sqlite ... (in capture order)  ->  /content/results/e3_breakdown.jsonl
+  python e3_analyze.py nsys/e3_1.sqlite ... (in capture order)  ->  $RESULTS_DIR/e3_breakdown.jsonl
 
 Steps are delimited by the sampler kernel (one per forward pass). GPU steps are aligned with the CPU-side purity
 list from e3_cpu_steps.jsonl when the counts agree; otherwise the steady-state middle of the run is used.
 GEMMs are named by position: a pure step launches 4 per layer (qkv, o, gate_up, down) plus lm_head.
 """
+
 import collections
 import json
 import os
@@ -18,14 +19,20 @@ N_LAYERS = 32
 GEMM = re.compile(r"gemm|cutlass|xmma|Kernel2", re.I)
 MARKER = re.compile(r"^_gumbel_sample_kernel$")  # the sampler: exactly one per forward pass
 EMBED = re.compile(r"embedding")  # first kernel of the forward pass; everything before it is step input prep
-CATS = [("attention", re.compile(r"flash|attn|paged", re.I)), ("kv_write", re.compile(r"reshape_and_cache", re.I)),
-        ("norm", re.compile(r"rms_norm|layernorm", re.I)), ("act", re.compile(r"silu|gelu", re.I))]
+CATS = [
+    ("attention", re.compile(r"flash|attn|paged", re.I)),
+    ("kv_write", re.compile(r"reshape_and_cache", re.I)),
+    ("norm", re.compile(r"rms_norm|layernorm", re.I)),
+    ("act", re.compile(r"silu|gelu", re.I)),
+]
 
 
 def kernels(path):
     con = sqlite3.connect(path)
-    q = ("SELECT k.start, k.end, s.value FROM CUPTI_ACTIVITY_KIND_KERNEL k "
-         "JOIN StringIds s ON k.shortName = s.id ORDER BY k.start")
+    q = (
+        "SELECT k.start, k.end, s.value FROM CUPTI_ACTIVITY_KIND_KERNEL k "
+        "JOIN StringIds s ON k.shortName = s.id ORDER BY k.start"
+    )
     return con.execute(q).fetchall()
 
 
@@ -75,10 +82,10 @@ def attribute(step):
 
 
 if __name__ == "__main__":
-    res = os.environ.get("RES", "/content/results")
-    cpu = [json.loads(l) for l in open(f"{res}/e3_cpu_steps.jsonl")]
+    res = os.environ.get("RESULTS_DIR", "./results")
+    cpu = [json.loads(line) for line in open(f"{res}/e3_cpu_steps.jsonl")]
     rows = []
-    for path, c in zip(sys.argv[1:], cpu):
+    for path, c in zip(sys.argv[1:], cpu, strict=True):
         steps = split_steps(kernels(path))
         purity = c["purity"]
         if abs(len(steps) - len(purity)) <= 1:
@@ -104,9 +111,19 @@ if __name__ == "__main__":
             for s, e, n in steps[i]:
                 names[n] += e - s
         top = [(n[:90], round(t / len(pure_idx) / 1e3, 1)) for n, t in names.most_common(15)]
-        row = {"b": c["b"], "s": c["s"], "how": how, "n_gpu_steps": len(steps), "n_cpu_steps": len(purity),
-               "n_pure_used": len(pure_idx), "kernels_per_step": mode_nk, "gemms_named": named,
-               "cpu_step_ms": c["step_ms"], **{f"{k}_ms": round(v, 4) for k, v in med.items()}, "top_kernels_us": top}
+        row = {
+            "b": c["b"],
+            "s": c["s"],
+            "how": how,
+            "n_gpu_steps": len(steps),
+            "n_cpu_steps": len(purity),
+            "n_pure_used": len(pure_idx),
+            "kernels_per_step": mode_nk,
+            "gemms_named": named,
+            "cpu_step_ms": c["step_ms"],
+            **{f"{k}_ms": round(v, 4) for k, v in med.items()},
+            "top_kernels_us": top,
+        }
         rows.append(row)
         print(json.dumps({k: v for k, v in row.items() if k != "top_kernels_us"}), flush=True)
     with open(f"{res}/e3_breakdown.jsonl", "w") as f:

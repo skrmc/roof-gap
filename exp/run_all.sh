@@ -1,15 +1,19 @@
 #!/bin/bash
-# Runs every formal experiment in sequence on the Colab VM; one log per step, DONE marker at the end.
-cd /content/exp
-mkdir -p /content/results /content/nsys
-step() { echo "=== $1 $(date +%T)" >> /content/results/progress.txt; }
+# Runs every A100 experiment in sequence from this directory; one log per step in $RESULTS_DIR.
+# Needs root for clock locking (set SM_CLOCK=none otherwise) and Nsight Systems for E3.
+set -u
+cd "$(dirname "$0")" || exit 1
+export RESULTS_DIR="${RESULTS_DIR:-$PWD/../results}" MODEL_DIR="${MODEL_DIR:-$PWD/../models/llama31-8b}"
+NSYS_DIR="$RESULTS_DIR/nsys"
+mkdir -p "$RESULTS_DIR" "$NSYS_DIR"
+step() { echo "=== $1 $(date +%T)"; }
 
-step e1_gemm;      python e1_gemm.py > /content/results/e1.log 2>&1
-step e3_nsys;      nsys profile -t cuda,nvtx --cuda-graph-trace=node --capture-range=cudaProfilerApi \
-                     --capture-range-end=repeat:8 -o /content/nsys/e3_%n -f true python e3_nsys.py > /content/results/e3.log 2>&1
-step e3_export;    for f in $(ls /content/nsys/e3_*.nsys-rep | sort -V); do nsys export --type sqlite -f true -o "${f%.nsys-rep}.sqlite" "$f" > /dev/null 2>&1; done
-step e3_analyze;   python e3_analyze.py $(ls /content/nsys/e3_*.sqlite | sort -V) > /content/results/e3_analyze.log 2>&1
-step e2_grid;      python e2_steps.py graph 1215 all > /content/results/e2_grid.log 2>&1
-step e4_eager;     python e2_steps.py eager 1215 sub > /content/results/e4_eager.log 2>&1
-step e5_unlocked;  python e2_steps.py graph none sub > /content/results/e5_unlocked.log 2>&1
-step DONE
+step e1_gemm;     python e1_gemm.py > "$RESULTS_DIR/e1.log" 2>&1
+step e3_nsys;     nsys profile -t cuda,nvtx --cuda-graph-trace=node --capture-range=cudaProfilerApi \
+                    --capture-range-end=repeat:8 -o "$NSYS_DIR/e3_%n" -f true python e3_nsys.py > "$RESULTS_DIR/e3.log" 2>&1
+mapfile -t reps < <(printf '%s\n' "$NSYS_DIR"/e3_*.nsys-rep | sort -V)  # capture order: e3_1, e3_2, ...
+for f in "${reps[@]}"; do nsys export --type sqlite -f true -o "${f%.nsys-rep}.sqlite" "$f" > /dev/null; done
+step e3_analyze;  python e3_analyze.py "${reps[@]/%.nsys-rep/.sqlite}" > "$RESULTS_DIR/e3_analyze.log" 2>&1
+step e2_grid;     python e2_steps.py > "$RESULTS_DIR/e2_grid.log" 2>&1
+step e4_attn;     python e4_attn.py > "$RESULTS_DIR/e4.log" 2>&1 && python e4_attn.py --split >> "$RESULTS_DIR/e4.log" 2>&1
+step finished

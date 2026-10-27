@@ -3,20 +3,21 @@
 Every op is (name, FLOPs, bytes moved to/from HBM). Step time under the roofline is
 sum_i max(F_i / peak_flops, B_i / peak_bw), i.e. ops are serialized and each is bound by one ceiling.
 """
+
 from dataclasses import dataclass
 
 
 @dataclass
 class Model:
     name: str
-    d: int          # hidden size
-    L: int          # layers
-    hq: int         # query heads
-    hkv: int        # KV heads
-    dh: int         # head dim
-    ffn: int        # MLP intermediate size
+    d: int  # hidden size
+    L: int  # layers
+    hq: int  # query heads
+    hkv: int  # KV heads
+    dh: int  # head dim
+    ffn: int  # MLP intermediate size
     vocab: int
-    wbytes: int = 2   # weight bytes (bf16)
+    wbytes: int = 2  # weight bytes (bf16)
     kvbytes: int = 2  # KV cache bytes (bf16)
 
     @property
@@ -24,8 +25,12 @@ class Model:
         return 2 * self.L * self.hkv * self.dh * self.kvbytes
 
     def linears(self):  # (name, N_out, K_in) per layer, vLLM-style fused QKV and gate/up
-        return [("qkv", (self.hq + 2 * self.hkv) * self.dh, self.d), ("o", self.d, self.hq * self.dh),
-                ("gate_up", 2 * self.ffn, self.d), ("down", self.d, self.ffn)]
+        return [
+            ("qkv", (self.hq + 2 * self.hkv) * self.dh, self.d),
+            ("o", self.d, self.hq * self.dh),
+            ("gate_up", 2 * self.ffn, self.d),
+            ("down", self.d, self.ffn),
+        ]
 
     @property
     def params(self):
@@ -37,7 +42,7 @@ class Model:
 class HW:
     name: str
     flops: float  # dense BF16 FLOP/s
-    bw: float     # HBM B/s
+    bw: float  # HBM B/s
 
 
 A100_SPEC = HW("A100-SXM4-40GB datasheet", 312e12, 1555e9)
@@ -51,8 +56,13 @@ def decode_ops(m: Model, b: int, s: int):
         ops.append((name, m.L * 2 * b * n * k, m.L * a * (n * k + b * k + b * n)))
     ctx = s + 1
     # attention: QK^T and PV, 2*dh FLOPs per (head, key) each; reads the whole K and V cache once
-    ops.append(("attn", m.L * 4 * b * m.hq * m.dh * ctx,
-                m.L * (b * ctx * 2 * m.hkv * m.dh * m.kvbytes + 2 * b * m.hq * m.dh * a)))
+    ops.append(
+        (
+            "attn",
+            m.L * 4 * b * m.hq * m.dh * ctx,
+            m.L * (b * ctx * 2 * m.hkv * m.dh * m.kvbytes + 2 * b * m.hq * m.dh * a),
+        )
+    )
     ops.append(("kv_write", 0, b * m.kv_per_token))
     # elementwise: 2x RMSNorm (r+w b*d), RoPE on q,k, SiLU*mul (r 2*ffn, w ffn), 2x residual add (r 2, w 1)
     ew = b * a * (2 * 2 * m.d + 2 * (m.hq + m.hkv) * m.dh + 3 * m.ffn + 2 * 3 * m.d)
@@ -67,10 +77,10 @@ def step_time(m: Model, hw: HW, b: int, s: int):
 
 if __name__ == "__main__":
     m, hw = LLAMA31_8B, A100_SPEC
-    print(f"params={m.params/1e9:.3f}B  kv/token={m.kv_per_token} B  ridge={hw.flops/hw.bw:.0f} FLOP/B")
+    print(f"params={m.params / 1e9:.3f}B  kv/token={m.kv_per_token} B  ridge={hw.flops / hw.bw:.0f} FLOP/B")
     w = sum(B for n, _, B in decode_ops(m, 1, 0) if n in ("qkv", "o", "gate_up", "down", "lm_head"))
-    print(f"weight bytes read per step ~ {w/1e9:.2f} GB  ->  floor {w/hw.bw*1e3:.2f} ms/step")
-    print(f"b*s where KV bytes == weight bytes: {w/m.kv_per_token:,.0f} tokens")
+    print(f"weight bytes read per step ~ {w / 1e9:.2f} GB  ->  floor {w / hw.bw * 1e3:.2f} ms/step")
+    print(f"b*s where KV bytes == weight bytes: {w / m.kv_per_token:,.0f} tokens")
     print("\n   b      s   T_step(ms)  tok/s     F(TFLOP)  B(GB)  AI    weights%  kv%")
     for b in (1, 8, 32, 64, 128, 256):
         for s in (512, 4096):
@@ -80,5 +90,7 @@ if __name__ == "__main__":
             F, B = sum(o[1] for o in ops), sum(o[2] for o in ops)
             t = step_time(m, hw, b, s)
             kv = next(o[2] for o in ops if o[0] == "attn")
-            print(f"{b:4d} {s:6d} {t*1e3:10.2f} {b/t:8.0f} {F/1e12:10.3f} {B/1e9:6.2f} {F/B:5.1f} "
-                  f"{w/B*100:8.0f}% {kv/B*100:4.0f}%")
+            print(
+                f"{b:4d} {s:6d} {t * 1e3:10.2f} {b / t:8.0f} {F / 1e12:10.3f} {B / 1e9:6.2f} {F / B:5.1f} "
+                f"{w / B * 100:8.0f}% {kv / B * 100:4.0f}%"
+            )

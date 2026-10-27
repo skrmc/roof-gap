@@ -1,17 +1,22 @@
-"""E6: decode attention microbenchmark with vLLM's own kernel, called the way vLLM 0.32 calls it on A100.
+"""E4: decode attention microbenchmark with vLLM's own kernel, called the way vLLM 0.32 calls it on A100.
 
-FA2 paged split-KV (num_splits=0: on FA2 vLLM leaves the split count to the kernel heuristic), KV cache in vLLM's layout: one [blocks, H_kv, 16, 2*D]
-tensor per layer, viewed as K and V via transpose(1, 2).split(D). KV copies rotate so every call reads a cold
-KV (as in the model, where 31 other layers' KV sit between two uses of one layer's KV); timed in a CUDA graph.
+FA2 paged split-KV with num_splits=0 (on FA2, vLLM leaves the split count to the kernel heuristic). The KV cache
+uses vLLM's layout: one [blocks, H_kv, 16, 2*D] tensor per layer, viewed as K and V via transpose(1, 2).split(D).
+KV copies rotate so every call reads a cold KV (in the model, 31 other layers' KV sit between two uses of one
+layer's KV). Timed in a CUDA graph.
+
+  python e4_attn.py           # the (b, s) grid           -> e4_attn.json
+  python e4_attn.py --split   # frozen max_seqlen_k check  -> e4_split.json
 """
+
 import json
 import math
 import statistics
+import sys
 
 import torch
+from common import GRID, OSL, SM_CLOCK, ClockMonitor, out_path, set_clock
 from vllm.vllm_flash_attn import flash_attn_varlen_func
-
-from common import GRID, OSL, ClockMonitor, set_clock
 
 DEV = torch.device("cuda")
 HQ, HKV, D, BLK = 32, 8, 128, 16
@@ -31,9 +36,22 @@ def make_case(b, ctx, ncopy, max_k=None):
 
     def call(i):
         k, v = views[i % ncopy]
-        flash_attn_varlen_func(q=q, k=k, v=v, out=out, cu_seqlens_q=cu_q, max_seqlen_q=1, seqused_k=seqused,
-                               max_seqlen_k=max_k or ctx, softmax_scale=D**-0.5, causal=True, block_table=block_table,
-                               fa_version=2, num_splits=0)  # 0 = kernel heuristic, as vLLM passes on FA2
+        flash_attn_varlen_func(
+            q=q,
+            k=k,
+            v=v,
+            out=out,
+            cu_seqlens_q=cu_q,
+            max_seqlen_q=1,
+            seqused_k=seqused,
+            max_seqlen_k=max_k or ctx,
+            softmax_scale=D**-0.5,
+            causal=True,
+            block_table=block_table,
+            fa_version=2,
+            num_splits=0,
+        )  # 0 = kernel heuristic, as vLLM passes on FA2
+
     return call, kvs
 
 
@@ -72,15 +90,10 @@ def split_check():
             rows.append({"b": b, "s": s, "max_seqlen_k": max_k, "t_us": graph_time_us(call, 24)})
             print("SPLIT", json.dumps(rows[-1]), flush=True)
             del kvs, call
-    json.dump(rows, open("/content/results/e6_split.json", "w"), indent=1)
+    json.dump(rows, open(out_path("e4_split.json"), "w"), indent=1)
 
 
-if __name__ == "__main__" and "split" in __import__("sys").argv:
-    set_clock(1215)
-    split_check()
-    set_clock(None)
-elif __name__ == "__main__":
-    set_clock(1215)
+def grid():
     rows = []
     with ClockMonitor() as mon:
         for b, s in GRID:
@@ -90,8 +103,20 @@ elif __name__ == "__main__":
             call, kvs = make_case(b, ctx, ncopy)
             t = graph_time_us(call, ncopy * max(1, 32 // ncopy))
             rows.append({"b": b, "s": s, "ctx": ctx, "t_us": t, "kv_MB": kv_bytes / 1e6, "GBps": kv_bytes / t / 1e3})
-            print("ROW", json.dumps({k: round(v, 2) if isinstance(v, float) else v for k, v in rows[-1].items()}), flush=True)
+            print(
+                "ROW",
+                json.dumps({k: round(v, 2) if isinstance(v, float) else v for k, v in rows[-1].items()}),
+                flush=True,
+            )
             del kvs, call
             torch.cuda.empty_cache()
+    json.dump({"rows": rows, "clocks": mon.summary()}, open(out_path("e4_attn.json"), "w"), indent=1)
+
+
+if __name__ == "__main__":
+    set_clock(SM_CLOCK)
+    if "--split" in sys.argv:
+        split_check()
+    else:
+        grid()
     set_clock(None)
-    json.dump({"rows": rows, "clocks": mon.summary()}, open("/content/results/e6_attn.json", "w"), indent=1)
