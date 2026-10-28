@@ -1,0 +1,55 @@
+roofline-gap
+============
+
+How far a real LLM decode step is from its roofline, and where the gap goes.
+
+Setup: Llama-3.1-8B-Instruct, bf16, vLLM 0.32.0, CUDA graphs on, one
+A100-SXM4-40GB with the SM clock locked at 1215 MHz. 53 (batch b, prompt
+length s) points, b = 1..256, s = 128..8192, 64 output tokens; only pure
+decode steps are timed.
+
+
+Results
+-------
+
+- The measured step is 1.25-1.72x the datasheet roofline (312 TFLOP/s,
+  1555 GB/s).
+- Roofline-style tools underpredict it by 20-49% (hand roofline, LLM-Viewer,
+  GenZ, aiconfigurator SOL); aiconfigurator EMPIRICAL/SILICON by 9-27%.
+- The gap, one term at a time (analysis/ladder.py):
+    R0  roofline at datasheet ceilings
+    R1  + measured ceilings (1449 GB/s HBM read, 253 TFLOP/s GEMM)
+    R2  + measured GEMM time at M = b (the largest term for b >= 32)
+    R3  + measured vLLM FA2 attention kernel
+  R3 is within 0.7 ms of the measured step; the rest is small kernels and
+  GPU idle time.
+
+
+Reproduce the numbers (CPU only, from results/)
+-----------------------------------------------
+
+    pip install -r requirements.txt
+    python analysis/ladder.py
+
+
+Re-run the experiments (A100, root for clock locking, Nsight Systems)
+---------------------------------------------------------------------
+
+    exp/setup.sh       # vLLM + model weights into models/llama31-8b
+    exp/run_all.sh     # E1-E4, raw results into results/
+
+  E1  GEMM and HBM microbenchmarks          results/e1_gemm.json
+  E2  per-step decode time over the grid    results/e2_steps.jsonl
+  E3  per-kernel breakdown (nsys)           results/e3_*.jsonl
+  E4  decode attention microbenchmark       results/e4_*.json
+
+SM_CLOCK=none runs without clock locking.
+
+Baseline predictions (results/baselines.csv): install
+requirements-baselines.txt (Python 3.12), clone LLM-Viewer into
+third_party/LLM-Viewer (or set LLMVIEWER_DIR), then run
+python analysis/baselines.py.
+
+
+License: MIT (LICENSE). baselines/a100_sxm_40g.yaml is Apache-2.0 (NVIDIA).
+The model weights are under the Llama 3.1 Community License.
